@@ -1,61 +1,137 @@
-import React, {useState} from 'react';
-import {Text, StyleSheet, SafeAreaView} from 'react-native';
+import React, {useState, useEffect} from 'react';
+import {Text, StyleSheet, Animated, Easing} from 'react-native';
 import {Svg, Path, G} from 'react-native-svg';
-import Slider from '@react-native-community/slider';
-import Animated from 'react-native-reanimated';
+import {Slider} from './Components/Slider';
+import {RateTitle} from './Components/RateTitle';
 
-const {createAnimatedComponent} = Animated;
+const {createAnimatedComponent, Value} = Animated;
 const AnimatedPath = createAnimatedComponent(Path);
+const AnimatedSvg = createAnimatedComponent(Svg);
 
 const {data} = require('./data/svgData.js');
+const inputRange = [0, 100, 200];
 export const App = () => {
-  const [rateValue, setRateValue] = useState(0);
-  const onRateChange = value => {
-    setRateValue(value);
+  const [rateValue, setRateValue] = useState(1);
+  const animatedRateValue = new Value(100);
+  const vibrationAnimatedValue = new Value(100);
+  const onRateChange = (panValue, rate) => {
+    setRateValue(Math.floor(rate));
+    animatedRateValue.setValue(panValue);
   };
+
+  useEffect(() => {
+    const startVibration = () => {
+      Animated.timing(vibrationAnimatedValue, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.inOut(Easing.bounce),
+        useNativeDriver: true,
+      }).start(() => {
+        Animated.timing(vibrationAnimatedValue, {
+          toValue: 100,
+          duration: 300,
+          easing: Easing.inOut(Easing.bounce),
+          useNativeDriver: true,
+        }).start();
+      });
+    };
+    animatedRateValue.addListener(({value}) => {
+      if (value < 50) {
+        startVibration();
+      }
+    });
+    return () => {
+      animatedRateValue.removeAllListeners();
+    };
+  }, [animatedRateValue, vibrationAnimatedValue]);
+
+  const backgroundStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.background),
+  });
+
+  const eyeLStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.paths.eyeL),
+  });
+
+  const pupilLStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.paths.pupilL),
+  });
+
+  const eyeRStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.paths.eyeR),
+  });
+
+  const pupilRStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.paths.pupilR),
+  });
+
+  const mouthStyle = animatedRateValue.interpolate({
+    inputRange,
+    outputRange: data.map(item => item.paths.mouth),
+  });
+
+  const translatePupilStyle = animatedRateValue.interpolate({
+    inputRange: [0, 20, 100, 180, 200],
+    outputRange: [-0, -10, 0, 10, 0],
+  });
+
+  const vibrationInterpolate = vibrationAnimatedValue.interpolate({
+    inputRange: [0, 25, 50, 100],
+    outputRange: [0, -5, 0, 5],
+  });
+
+  const animtedPupilStyle = {
+    transform: [
+      {translateX: translatePupilStyle},
+      {translateY: translatePupilStyle},
+    ],
+  };
+
+  const vibrationStyle = {
+    transform: [
+      {translateX: vibrationInterpolate},
+      {translateY: vibrationInterpolate},
+    ],
+  };
+
+  const {name = 'Hideous'} = data[rateValue] || {};
   return (
-    <SafeAreaView
-      style={[styles.container, {backgroundColor: data[rateValue].background}]}>
-      <Text>{data[rateValue].name}</Text>
-      <Svg style={styles.svg} viewBox="0 0 190 300">
+    <Animated.View
+      style={[styles.container, {backgroundColor: backgroundStyle}]}>
+      <Text style={styles.question}>{'How was \n your ride ?'}</Text>
+      <RateTitle value={rateValue}>{name}</RateTitle>
+      <AnimatedSvg style={[styles.svg, vibrationStyle]} viewBox="0 0 200 200">
         <G stroke="#979797">
+          <AnimatedPath d={eyeLStyle} stroke="black" fill="#fff" />
           <AnimatedPath
-            d={data[rateValue].paths.eyeL}
-            stroke="black"
-            fill="#fff"
-          />
-          <AnimatedPath
-            d={data[rateValue].paths.pupilL}
+            d={pupilLStyle}
+            style={animtedPupilStyle}
             stroke="black"
             fill="#000"
           />
+          <AnimatedPath d={eyeRStyle} stroke="black" fill="#fff" />
           <AnimatedPath
-            d={data[rateValue].paths.eyeR}
-            stroke="black"
-            fill="#fff"
-          />
-          <AnimatedPath
-            d={data[rateValue].paths.pupilR}
+            d={pupilRStyle}
+            style={animtedPupilStyle}
             stroke="black"
             fill="#000"
           />
-          <AnimatedPath
-            d={data[rateValue].paths.mouth}
-            stroke="black"
-            fill="transparent"
-          />
+          <AnimatedPath d={mouthStyle} stroke="black" fill="transparent" />
         </G>
-      </Svg>
+      </AnimatedSvg>
+
       <Slider
-        style={{width: 200, height: 40, marginTop: 100}}
         minimumValue={0}
         maximumValue={2}
-        step={1}
-        minimumTrackTintColor="#FFFFFF"
-        maximumTrackTintColor="#000000"
+        value={rateValue}
         onValueChange={onRateChange}
       />
-    </SafeAreaView>
+    </Animated.View>
   );
 };
 
@@ -67,9 +143,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   svg: {
-    width: 190,
     height: 300,
-    aspectRatio: 2 / 3,
+    aspectRatio: 1,
     flexDirection: 'row',
+  },
+  question: {
+    fontSize: 32,
+    marginVertical: 24,
+    textAlign: 'center',
   },
 });
