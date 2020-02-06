@@ -76,9 +76,7 @@ export class Slider extends PureComponent {
             ref={panRef}
             activeOffsetX={[-20, 20]}
             onGestureEvent={this._onPanGestureEvent}>
-            <Animated.View
-              style={styles.horizontalPan}
-              pointerEvents="box-none">
+            <Animated.View style={styles.horizontalPan}>
               <View style={[styles.line, {width}]} />
               <Animated.View
                 style={[

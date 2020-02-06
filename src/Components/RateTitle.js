@@ -22,11 +22,6 @@ export const RateTitle = ({children, value}) => {
     outputRange: [0, 1],
   });
 
-  const scaleInterpolate = animatedValue.interpolate({
-    inputRange: [0, 100],
-    outputRange: [0, 1],
-  });
-
   const translateYInterpolate = animatedValue.interpolate({
     inputRange: [0, 100],
     outputRange: [100, 0],
