@@ -6,16 +6,12 @@ import {
   State,
 } from 'react-native-gesture-handler';
 
-const {Value, event, add} = Animated;
 export class Slider extends PureComponent {
   constructor(props) {
     super(props);
     const {value, width, maximumValue, circleRadius} = props;
-    this._lastOffset = {x: 0, y: 0};
-    this._touchX = new Value((value * width) / 2 + circleRadius);
-    this._cursorX = new Value((value * width) / 2 + circleRadius);
-    this._translateX = add(this._touchX, new Value(-props.circleRadius));
-    this._onPanGestureEvent = event(
+    this._touchX = new Animated.Value((value * width) / 2 + circleRadius);
+    this._onPanGestureEvent = Animated.event(
       [
         {
           nativeEvent: {
@@ -28,12 +24,14 @@ export class Slider extends PureComponent {
     this._touchX.addListener(({value: currentValue}) => {
       const panValue =
         currentValue >= width ? width : currentValue <= 0 ? 0 : currentValue;
-      const rateValue = Math.floor((panValue * maximumValue) / width);
-      this.props.onValueChange(panValue, rateValue);
+      const rateValue = (panValue * maximumValue) / width;
+      props.onValueChange && props.onValueChange(panValue, rateValue);
     });
   }
 
-  getInitialPosition = (value, width, minimumValue, maximumValue) => {};
+  componentWillUnmount() {
+    this._touchX.removeAllListeners();
+  }
 
   _onTapHandlerStateChange = ({nativeEvent}) => {
     if (nativeEvent.oldState === State.ACTIVE) {
@@ -45,16 +43,10 @@ export class Slider extends PureComponent {
     }
   };
 
-  componentWillUnmount() {
-    this._touchX.removeAllListeners();
-  }
-
   render() {
     const {width, circleRadius, cursorBorderWidth} = this.props;
-    const tapRef = React.createRef();
-    const panRef = React.createRef();
 
-    const transX = this._translateX.interpolate({
+    const transX = this._touchX.interpolate({
       inputRange: [-1, 0, width, width + 1],
       outputRange: [
         -circleRadius,
@@ -65,13 +57,16 @@ export class Slider extends PureComponent {
       extrapolate: 'clamp',
     });
 
+    const tapRef = React.createRef();
+    const panRef = React.createRef();
+
     return (
       <TapGestureHandler
         ref={tapRef}
         waitFor={panRef}
-        onHandlerStateChange={this._onTapHandlerStateChange}
-        shouldCancelWhenOutside>
-        <Animated.View style={[styles.wrapper, {width}]}>
+        shouldCancelWhenOutside
+        onHandlerStateChange={this._onTapHandlerStateChange}>
+        <View style={[styles.wrapper, {width}]}>
           <PanGestureHandler
             ref={panRef}
             activeOffsetX={[-20, 20]}
@@ -82,14 +77,16 @@ export class Slider extends PureComponent {
                 style={[
                   styles.circleBorder,
                   {
-                    borderRadius: circleRadius,
+                    borderRadius: circleRadius * 2,
                     borderWidth: cursorBorderWidth,
-                    padding: circleRadius,
+                    padding: circleRadius * 2,
                     transform: [
                       {
-                        translateX: add(
+                        translateX: Animated.add(
                           transX,
-                          new Value(-circleRadius / 2 - cursorBorderWidth),
+                          new Animated.Value(
+                            -circleRadius / 2 - cursorBorderWidth * 2,
+                          ),
                         ),
                       },
                     ],
@@ -100,20 +97,16 @@ export class Slider extends PureComponent {
                 style={[
                   styles.circle,
                   {
-                    width: circleRadius,
-                    height: circleRadius,
-                    borderRadius: circleRadius,
-                    transform: [
-                      {
-                        translateX: transX,
-                      },
-                    ],
+                    width: circleRadius * 2,
+                    height: circleRadius * 2,
+                    borderRadius: circleRadius * 2,
+                    transform: [{translateX: transX}],
                   },
                 ]}
               />
             </Animated.View>
           </PanGestureHandler>
-        </Animated.View>
+        </View>
       </TapGestureHandler>
     );
   }
@@ -121,7 +114,7 @@ export class Slider extends PureComponent {
 
 Slider.defaultProps = {
   width: 200,
-  circleRadius: 20,
+  circleRadius: 10,
   cursorBorderWidth: 3,
 };
 
@@ -143,7 +136,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    borderColor: '#fff',
+    borderColor: '#000',
     borderRadius: 3,
     backgroundColor: 'transparent',
   },

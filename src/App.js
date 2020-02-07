@@ -1,49 +1,51 @@
 import React, {useState, useEffect} from 'react';
-import {Text, StyleSheet, Animated, Easing} from 'react-native';
+import {StyleSheet, Text, Animated, Easing} from 'react-native';
 import {Svg, Path, G} from 'react-native-svg';
 import {Slider} from './Components/Slider';
 import {RateTitle} from './Components/RateTitle';
 
-const {createAnimatedComponent, Value} = Animated;
-const AnimatedPath = createAnimatedComponent(Path);
-const AnimatedSvg = createAnimatedComponent(Svg);
-
 const {data} = require('./data/svgData.js');
 const inputRange = [0, 100, 200];
+
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedSvg = Animated.createAnimatedComponent(Svg);
+const animatedRateValue = new Animated.Value(100);
+const vibrationAnimatedValue = new Animated.Value(100);
+
 export const App = () => {
   const [rateValue, setRateValue] = useState(1);
-  const animatedRateValue = new Value(100);
-  const vibrationAnimatedValue = new Value(100);
-  const onRateChange = (panValue, rate) => {
-    setRateValue(Math.floor(rate));
-    animatedRateValue.setValue(panValue);
-  };
 
   useEffect(() => {
     const startVibration = () => {
-      Animated.timing(vibrationAnimatedValue, {
-        toValue: 0,
-        duration: 300,
-        easing: Easing.inOut(Easing.bounce),
-        useNativeDriver: true,
-      }).start(() => {
+      Animated.sequence([
+        Animated.timing(vibrationAnimatedValue, {
+          toValue: 0,
+          duration: 150,
+          easing: Easing.inOut(Easing.bezier(0.36, 0.07, 0.19, 0.97)),
+          useNativeDriver: true,
+        }),
         Animated.timing(vibrationAnimatedValue, {
           toValue: 100,
-          duration: 300,
-          easing: Easing.inOut(Easing.bounce),
+          duration: 150,
+          easing: Easing.inOut(Easing.bezier(0.36, 0.07, 0.19, 0.97)),
           useNativeDriver: true,
-        }).start();
-      });
+        }),
+      ]).start();
     };
     animatedRateValue.addListener(({value}) => {
-      if (value < 50) {
+      if (value < 40) {
         startVibration();
       }
     });
     return () => {
       animatedRateValue.removeAllListeners();
     };
-  }, [animatedRateValue, vibrationAnimatedValue]);
+  }, []);
+
+  const handleSliderChange = (pan, rate) => {
+    setRateValue(Math.floor(rate));
+    animatedRateValue.setValue(pan);
+  };
 
   const backgroundStyle = animatedRateValue.interpolate({
     inputRange,
@@ -82,7 +84,7 @@ export const App = () => {
 
   const vibrationInterpolate = vibrationAnimatedValue.interpolate({
     inputRange: [0, 25, 50, 100],
-    outputRange: [0, -5, 0, 5],
+    outputRange: [0, -10, 0, 10],
   });
 
   const animtedPupilStyle = {
@@ -99,7 +101,7 @@ export const App = () => {
     ],
   };
 
-  const {name = 'Hideous'} = data[rateValue] || {};
+  const {name = 'Ok'} = data[rateValue] || {};
   return (
     <Animated.View
       style={[styles.container, {backgroundColor: backgroundStyle}]}>
@@ -126,10 +128,9 @@ export const App = () => {
       </AnimatedSvg>
 
       <Slider
-        minimumValue={0}
-        maximumValue={2}
         value={rateValue}
-        onValueChange={onRateChange}
+        maximumValue={2}
+        onValueChange={handleSliderChange}
       />
     </Animated.View>
   );
@@ -138,7 +139,6 @@ export const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'red',
     alignItems: 'center',
     justifyContent: 'center',
   },
